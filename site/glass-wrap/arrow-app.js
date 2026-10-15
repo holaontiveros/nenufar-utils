@@ -52,12 +52,16 @@ function changeUnit(event) {
   const nextUnit = event.target.value;
   for (const key of Object.keys(state.values)) {
     if (state.values[key] !== '') state.values[key] = String(convertUnits(Number(state.values[key]), state.unit, nextUnit));
+    // Only unit changes rewrite the native input. Reactive value bindings
+    // discard unfinished decimals (such as `8.`) and move the caret.
+    event.target.form.elements.namedItem(key).value = state.values[key];
   }
   state.unit = nextUnit;
 }
 
 function inputMeasurement(event) {
   const key = event.target.name;
+  if (!Object.hasOwn(state.values, key)) return;
   state.values[key] = event.target.value;
   state.touched[key] = true;
 }
@@ -74,9 +78,9 @@ const page = html`
         <div class="section-heading"><p class="eyebrow">${() => text('measurements')}</p><p>${() => text('measurementsNote')}</p>
           <label class="unit-control" for="unit"><span>${() => text('units')}</span><select id="unit" value="${() => state.unit}" @change="${changeUnit}"><option value="mm">mm</option><option value="cm">cm</option></select></label>
         </div>
-        <label for="top-diameter"><span>${() => `${text('topDiameter')} (${state.unit})`}</span><input id="top-diameter" name="topDiameter" type="number" min="0.01" step="any" inputmode="decimal" required value="${() => state.values.topDiameter}" placeholder="${() => text('example80')}" aria-invalid="${() => String(Boolean(error('topDiameter')))}"/><small id="top-diameter-error" class="field-error">${() => error('topDiameter')}</small></label>
-        <label for="bottom-diameter"><span>${() => `${text('bottomDiameter')} (${state.unit})`}</span><input id="bottom-diameter" name="bottomDiameter" type="number" min="0.01" step="any" inputmode="decimal" required value="${() => state.values.bottomDiameter}" placeholder="${() => text('example70')}" aria-invalid="${() => String(Boolean(error('bottomDiameter')))}"/><small id="bottom-diameter-error" class="field-error">${() => error('bottomDiameter')}</small></label>
-        <label for="glass-height"><span>${() => `${text('height')} (${state.unit})`}</span><input id="glass-height" name="height" type="number" min="0.01" step="any" inputmode="decimal" required value="${() => state.values.height}" placeholder="${() => text('example120')}" aria-invalid="${() => String(Boolean(error('height')))}"/><small id="glass-height-error" class="field-error">${() => error('height')}</small></label>
+        <label for="top-diameter"><span>${() => `${text('topDiameter')} (${state.unit})`}</span><input id="top-diameter" name="topDiameter" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => text('example80')}" aria-invalid="${() => String(Boolean(error('topDiameter')))}"/><small id="top-diameter-error" class="field-error">${() => error('topDiameter')}</small></label>
+        <label for="bottom-diameter"><span>${() => `${text('bottomDiameter')} (${state.unit})`}</span><input id="bottom-diameter" name="bottomDiameter" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => text('example70')}" aria-invalid="${() => String(Boolean(error('bottomDiameter')))}"/><small id="bottom-diameter-error" class="field-error">${() => error('bottomDiameter')}</small></label>
+        <label for="glass-height"><span>${() => `${text('height')} (${state.unit})`}</span><input id="glass-height" name="height" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => text('example120')}" aria-invalid="${() => String(Boolean(error('height')))}"/><small id="glass-height-error" class="field-error">${() => error('height')}</small></label>
         <p id="shape-note" class="shape-note">${() => { const current = template(); return !current || current.kind === 'straight' ? text('matchingDiameters') : text('conicalNote'); }}</p>
         <label class="tab-option" for="glue-tab"><input id="glue-tab" type="checkbox" checked="${() => state.glueTab}" @change="${(event) => { state.glueTab = event.target.checked; }}"/><span><strong>${() => text('addGlueTab')}</strong><small>${() => text('glueTabNote')}</small></span></label>
         <label class="tab-option" for="filled-template"><input id="filled-template" type="checkbox" checked="${() => state.filled}" @change="${(event) => { state.filled = event.target.checked; }}"/><span><strong>${() => text('fillTemplate')}</strong><small>${() => text('fillTemplateNote')}</small></span></label>
