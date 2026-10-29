@@ -14,7 +14,13 @@ workflow, design editor, material presets, or support for inches.
 
 - Input is manual, through clear, understandable fields.
 - All measurements and exported SVG dimensions use millimeters.
-- The required inputs are top diameter, bottom diameter, and glass height.
+- The required inputs are the top and bottom perimeter or diameter, plus glass
+  height. Perimeter is the default so users can measure around the glass with
+  a flexible tape. One selector switches both edge measurements together.
+- Switching between perimeter and diameter converts current entries without
+  changing the physical wrap or glass height. Perimeters are divided by `π`
+  after unit normalization; the geometry module continues to consume diameters
+  in millimeters.
 - Equal top and bottom diameters mean a straight glass; no separate shape
   selector is needed.
 - Different diameters mean a conical frustum.
@@ -77,7 +83,8 @@ workflow, design editor, material presets, or support for inches.
 ## Scope and user flow
 
 1. The user opens the single-page app.
-2. They enter positive top diameter, bottom diameter, and height values in mm.
+2. They enter positive top perimeter, bottom perimeter, and height values in mm
+   or cm, or switch the measurement selector to diameter.
 3. The app validates the values as they are entered and explains any problem in
    plain language.
 4. It identifies the shape as straight when the diameters are equal; otherwise
@@ -148,10 +155,12 @@ styling. This keeps preview and download identical and avoids duplicated math.
 
 ### 4. Build the user interface
 
-- Provide fields labeled “Top diameter (mm)”, “Bottom diameter (mm)”, and
-  “Glass height (mm)”.
-- Explain that matching diameters create a straight wrap and different values
-  create a conical wrap.
+- Default to “Top perimeter (mm)”, “Bottom perimeter (mm)”, and “Glass height
+  (mm)”. A Perimeter/Diameter selector updates the edge labels, instructions,
+  examples, and validation messages; all measurements follow the selected unit.
+- Explain how to measure around the outside with a flexible tape in perimeter
+  mode, or across the center in diameter mode. Matching edge measurements create
+  a straight wrap and different values create a conical wrap.
 - Provide an unchecked “Add 10 mm glue tab” control.
 - Update the preview and export availability as inputs become valid.
 - Keep validation messages close to the relevant fields and prevent exporting
@@ -167,6 +176,9 @@ styling. This keeps preview and download identical and avoids duplicated math.
 ## Acceptance criteria
 
 - A user can create and download a full-wrap SVG from valid mm measurements.
+- Perimeter is selected initially. Equivalent perimeter and diameter inputs
+  produce identical previews and exports; switching modes or units preserves
+  physical size, empty fields, and glass height (apart from unit conversion).
 - Equal diameters produce a rectangular wrap; unequal diameters produce a
   conical developed-surface outline.
 - The downloaded SVG has physical mm dimensions and has the same geometry as the

@@ -85,9 +85,11 @@ the white logo for future dark surfaces.
 
 ## Domain rules
 
-- Inputs are manual and expressed only in millimeters.
-- Required values: top diameter, bottom diameter, glass height. Each must be
-  finite and greater than zero.
+- Inputs are manual, in mm or cm, with perimeter selected by default and
+  diameter available for both edges. Switching modes preserves physical size.
+- Required values: top perimeter/diameter, bottom perimeter/diameter, glass
+  height. Each must be finite and greater than zero. Normalize to millimeters
+  and convert perimeter to diameter before passing values to the geometry module.
 - Equal top and bottom diameters represent a straight glass and yield a
   rectangle with width `π × diameter`.
 - Different diameters represent a conical frustum and yield its annular-sector

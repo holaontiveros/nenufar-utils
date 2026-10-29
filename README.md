@@ -29,9 +29,12 @@ npm run dev
 ```
 
 Then open `http://localhost:8000/` or a utility directly, such as
-`http://localhost:8000/sticker-counter/`. Enter the outside top diameter,
-bottom diameter, and height in millimeters. Equal diameters produce a straight
-rectangular wrap; different diameters produce a developed conical wrap.
+`http://localhost:8000/glass-wrap/`. Enter the outside top perimeter, bottom
+perimeter, and height in millimeters or centimeters. Use a flexible tape to
+measure around the glass, or select Diameter to measure across it. Switching
+measurement modes converts the entries while preserving the wrap's physical
+size. Matching top and bottom measurements produce a straight rectangular
+wrap; different measurements produce a developed conical wrap.
 
 Enable the optional 10 mm glue tab when the wrap will be glued rather than
 printed on sticker paper. The downloaded SVG includes real millimeter `width`

@@ -3,12 +3,14 @@ import {buildTemplate, createSvgMarkup, validateMeasurements} from './geometry.j
 import {createPngBlob} from './export.js';
 import {resolveLocale, translate} from './i18n.js';
 import {getPreferredLocale, getSessionStorage, savePreferredLocale} from '../shared/locale.js';
-import {convertUnits, unitToMillimeters} from './units.js';
+import {convertUnits} from './units.js';
+import {convertMeasurementMode, normalizeMeasurements} from './measurements.js';
 
 const storage = getSessionStorage(window);
 const state = reactive({
   locale: getPreferredLocale(navigator.language, storage),
   unit: 'mm',
+  measurementMode: 'perimeter',
   values: {topDiameter: '', bottomDiameter: '', height: ''},
   touched: {topDiameter: false, bottomDiameter: false, height: false},
   glueTab: false,
@@ -17,10 +19,17 @@ const state = reactive({
 });
 
 const text = (key) => translate(state.locale, key);
-const measurements = () => Object.fromEntries(Object.entries(state.values).map(([key, value]) => [key, unitToMillimeters(Number(value), state.unit)]));
+const measurementKey = (key) => state.measurementMode === 'perimeter' ? key.replace('Diameter', 'Perimeter') : key;
+const measurements = () => normalizeMeasurements(state.values, state.unit, state.measurementMode);
 const validation = () => validateMeasurements(measurements());
 const template = () => validation().valid ? buildTemplate(measurements(), {includeGlueTab: state.glueTab}) : null;
-const error = (key) => state.touched[key] && validation().errors[key] ? text(`${key}Error`).replace('{unit}', state.unit) : '';
+const error = (key) => state.touched[key] && validation().errors[key] ? text(`${measurementKey(key)}Error`).replace('{unit}', state.unit) : '';
+const placeholder = (key) => {
+  const examples = state.measurementMode === 'perimeter'
+    ? {topDiameter: 250, bottomDiameter: 220, height: 120}
+    : {topDiameter: 80, bottomDiameter: 70, height: 120};
+  return text('measurementExample').replace('{value}', String(convertUnits(examples[key], 'mm', state.unit)));
+};
 
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -52,11 +61,24 @@ function changeUnit(event) {
   const nextUnit = event.target.value;
   for (const key of Object.keys(state.values)) {
     if (state.values[key] !== '') state.values[key] = String(convertUnits(Number(state.values[key]), state.unit, nextUnit));
-    // Only unit changes rewrite the native input. Reactive value bindings
+    // Only unit/mode changes rewrite the native input. Reactive value bindings
     // discard unfinished decimals (such as `8.`) and move the caret.
     event.target.form.elements.namedItem(key).value = state.values[key];
   }
   state.unit = nextUnit;
+}
+
+function changeMeasurementMode(event) {
+  const nextMode = event.target.value;
+  for (const key of ['topDiameter', 'bottomDiameter']) {
+    if (state.values[key] !== '') {
+      const converted = convertMeasurementMode(Number(state.values[key]), state.measurementMode, nextMode);
+      // Suppress floating-point noise while retaining precision far beyond print scale.
+      state.values[key] = String(Number(converted.toPrecision(15)));
+    }
+    event.target.form.elements.namedItem(key).value = state.values[key];
+  }
+  state.measurementMode = nextMode;
 }
 
 function inputMeasurement(event) {
@@ -73,15 +95,17 @@ const page = html`
       <h1 id="page-title">${() => text('heading')}</h1>
       <p>${() => text('intro')}</p>
     </section>
-    <section class="workspace" aria-label="Glass wrap generator">
+    <section class="workspace" aria-label="${() => text('generatorLabel')}">
       <form id="measurements-form" class="controls" novalidate @input="${inputMeasurement}">
         <div class="section-heading"><p class="eyebrow">${() => text('measurements')}</p><p>${() => text('measurementsNote')}</p>
           <label class="unit-control" for="unit"><span>${() => text('units')}</span><select id="unit" value="${() => state.unit}" @change="${changeUnit}"><option value="mm">mm</option><option value="cm">cm</option></select></label>
+          <label class="unit-control" for="measurement-mode"><span>${() => text('measureUsing')}</span><select id="measurement-mode" value="${() => state.measurementMode}" aria-describedby="measurement-help" @change="${changeMeasurementMode}"><option value="perimeter">${() => text('perimeter')}</option><option value="diameter">${() => text('diameter')}</option></select></label>
+          <p id="measurement-help" class="measurement-help">${() => text(`${state.measurementMode}Help`)}</p>
         </div>
-        <label for="top-diameter"><span>${() => `${text('topDiameter')} (${state.unit})`}</span><input id="top-diameter" name="topDiameter" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => text('example80')}" aria-invalid="${() => String(Boolean(error('topDiameter')))}"/><small id="top-diameter-error" class="field-error">${() => error('topDiameter')}</small></label>
-        <label for="bottom-diameter"><span>${() => `${text('bottomDiameter')} (${state.unit})`}</span><input id="bottom-diameter" name="bottomDiameter" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => text('example70')}" aria-invalid="${() => String(Boolean(error('bottomDiameter')))}"/><small id="bottom-diameter-error" class="field-error">${() => error('bottomDiameter')}</small></label>
-        <label for="glass-height"><span>${() => `${text('height')} (${state.unit})`}</span><input id="glass-height" name="height" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => text('example120')}" aria-invalid="${() => String(Boolean(error('height')))}"/><small id="glass-height-error" class="field-error">${() => error('height')}</small></label>
-        <p id="shape-note" class="shape-note">${() => { const current = template(); return !current || current.kind === 'straight' ? text('matchingDiameters') : text('conicalNote'); }}</p>
+        <label for="top-diameter"><span>${() => `${text(measurementKey('topDiameter'))} (${state.unit})`}</span><input id="top-diameter" name="topDiameter" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => placeholder('topDiameter')}" aria-describedby="top-diameter-error" aria-invalid="${() => String(Boolean(error('topDiameter')))}"/><small id="top-diameter-error" class="field-error">${() => error('topDiameter')}</small></label>
+        <label for="bottom-diameter"><span>${() => `${text(measurementKey('bottomDiameter'))} (${state.unit})`}</span><input id="bottom-diameter" name="bottomDiameter" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => placeholder('bottomDiameter')}" aria-describedby="bottom-diameter-error" aria-invalid="${() => String(Boolean(error('bottomDiameter')))}"/><small id="bottom-diameter-error" class="field-error">${() => error('bottomDiameter')}</small></label>
+        <label for="glass-height"><span>${() => `${text('height')} (${state.unit})`}</span><input id="glass-height" name="height" type="number" min="0.01" step="any" inputmode="decimal" required placeholder="${() => placeholder('height')}" aria-describedby="glass-height-error" aria-invalid="${() => String(Boolean(error('height')))}"/><small id="glass-height-error" class="field-error">${() => error('height')}</small></label>
+        <p id="shape-note" class="shape-note">${() => { const current = template(); return !current || current.kind === 'straight' ? text(state.measurementMode === 'perimeter' ? 'matchingPerimeters' : 'matchingDiameters') : text(state.measurementMode === 'perimeter' ? 'conicalPerimeterNote' : 'conicalNote'); }}</p>
         <label class="tab-option" for="glue-tab"><input id="glue-tab" type="checkbox" checked="${() => state.glueTab}" @change="${(event) => { state.glueTab = event.target.checked; }}"/><span><strong>${() => text('addGlueTab')}</strong><small>${() => text('glueTabNote')}</small></span></label>
         <label class="tab-option" for="filled-template"><input id="filled-template" type="checkbox" checked="${() => state.filled}" @change="${(event) => { state.filled = event.target.checked; }}"/><span><strong>${() => text('fillTemplate')}</strong><small>${() => text('fillTemplateNote')}</small></span></label>
         <div class="download-actions"><button id="download" type="button" disabled="${() => !template()}" @click="${downloadSvg}">${() => text('downloadSvg')}</button><button id="download-png" type="button" disabled="${() => !template() || state.preparingPng}" @click="${downloadPng}">${() => state.preparingPng ? text('preparingPng') : text('downloadPng')}</button></div>
