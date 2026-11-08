@@ -126,3 +126,30 @@ test('custom rectangles preserve independent dimensions, units, and both preview
   await page.locator('#shape').selectOption('rectangle');
   await expect(page.locator('#rectangle-width')).toHaveValue('8');
 });
+
+for (const locale of ['en', 'es']) {
+  test(`Sticker Counter preserves decimal typing and cursor edits in every measurement field in ${locale}`, async ({page}) => {
+    await page.goto('/sticker-counter/');
+    await page.locator('#language').selectOption(locale);
+    await page.locator('#vinyl-width').selectOption('manual');
+    await page.locator('#sticker-size').selectOption('manual');
+    await page.locator('#gap').selectOption('manual');
+    await page.locator('#length').selectOption('manual');
+    for (const id of ['width-value', 'size-value', 'gap-value', 'length-value', 'rectangle-width', 'rectangle-height']) {
+      if (id === 'rectangle-width') await page.locator('#shape').selectOption('rectangle');
+      const input = page.locator(`#${id}`);
+      await input.fill('');
+      await input.press('8');
+      await input.press('.');
+      await input.press('5');
+      await expect(input).toHaveValue('8.5');
+      await input.press('ArrowLeft');
+      await input.press('2');
+      await expect(input).toHaveValue('8.25');
+      await input.fill('');
+      await input.press('.');
+      await input.press('5');
+      await expect(input).toHaveValue('.5');
+    }
+  });
+}
