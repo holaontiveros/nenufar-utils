@@ -63,7 +63,8 @@ workflow, design editor, material presets, or support for inches.
   identical stickers on vinyl rolls. It defaults to Nenúfar's 480 mm width and
   also accepts a custom width. It does not generate a print or VersaWorks
   layout file.
-- Sticker Counter supports circles, squares, and uploaded PNGs. A PNG keeps
+- Sticker Counter supports circles, squares, custom rectangles with independent
+  width and height, and uploaded PNGs. A PNG keeps
   its complete rectangular canvas, including transparent padding; its selected
   size applies to the longest side while preserving aspect ratio.
 - Sticker size quick options represent 3, 4, 5, 6, and 7 cm, with a manual

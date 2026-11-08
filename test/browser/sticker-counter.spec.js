@@ -91,3 +91,38 @@ test('Sticker Counter restores an uploaded PNG to its physical size', async ({pa
   await page.locator('#restore-original').click();
   await expect(page.locator('#size-value')).toHaveValue('10.16');
 });
+
+test('custom rectangles preserve independent dimensions, units, and both preview aspect ratios', async ({page}) => {
+  await page.goto('/sticker-counter/');
+  await page.locator('#shape').selectOption('rectangle');
+  await expect(page.locator('#sticker-size')).toBeHidden();
+  await page.getByLabel('Sticker width (mm)', {exact: true}).fill('80');
+  await page.getByLabel('Sticker height (mm)', {exact: true}).fill('30');
+  await expect(page.locator('#columns')).toHaveText('5');
+  await expect(page.locator('#rows')).toHaveText('29');
+  await expect(page.locator('#total')).toHaveText('145');
+  await expect(page.locator('.overview-sheet .sticker')).toHaveCount(145);
+  const ratio = locator => locator.evaluate(element => {
+    const {width, height} = element.getBoundingClientRect();
+    return width / height;
+  });
+  expect(await ratio(page.locator('.overview-sheet .sticker').first())).toBeCloseTo(80 / 30, 1);
+  await page.locator('#inspection-button').click();
+  expect(await ratio(page.locator('.inspection-cell .sticker'))).toBeCloseTo(80 / 30, 1);
+  await page.locator('#unit').selectOption('cm');
+  await expect(page.getByLabel('Sticker width (cm)', {exact: true})).toHaveValue('8');
+  await expect(page.getByLabel('Sticker height (cm)', {exact: true})).toHaveValue('3');
+  await expect(page.locator('#total')).toHaveText('145');
+  await page.locator('#language').selectOption('es');
+  await expect(page.locator('#shape option[value="rectangle"]')).toHaveText('Rectángulo');
+  await expect(page.getByLabel('Ancho del sticker (cm)', {exact: true})).toBeVisible();
+  await page.getByLabel('Alto del sticker (cm)', {exact: true}).fill('0');
+  await expect(page.locator('#total')).toHaveText('0');
+  await expect(page.locator('#rectangle-error')).toHaveText('Ingresa un valor mayor que cero.');
+  await page.locator('#shape').selectOption('square');
+  await expect(page.locator('#sticker-size')).toBeVisible();
+  await expect(page.locator('#rectangle-width')).toBeHidden();
+  await expect(page.locator('#total')).toHaveText('144');
+  await page.locator('#shape').selectOption('rectangle');
+  await expect(page.locator('#rectangle-width')).toHaveValue('8');
+});
