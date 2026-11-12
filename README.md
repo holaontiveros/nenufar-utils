@@ -8,6 +8,12 @@ directly to its public URL path.
 utility. It shows the color logo, centered Apps and Shop navigation, and a
 language selector. User-facing content is available in English and Spanish.
 
+Generate every link to the Nenúfar shop with `shopUrl` from
+`site/shared/shop-links.js`. Pass the storefront path, `window.location.pathname`
+as `pagePath`, and a stable placement name such as `results` or `header`.
+The helper preserves storefront query parameters such as `variant` and adds
+Shopify attribution, with `utm_content` identifying the page and placement.
+
 ## Arrow.js migration
 
 The staged Arrow.js migration and behavior-parity test requirements are
